@@ -1,6 +1,6 @@
+io.write("Lua - Calling echo() ...\n")
 
-io.write(string.format("Ello from %s\n", _VERSION))
+local value = echo("Firste", "Second\n", 112233, "end")
+value = value + echo("Firste", "SecondRUN\n", "end for real this time")
 
-io.write("Calling echo() ...\n")
-local value = echo("First", "Second", 112233)
-io.write(string.format("echo() returned: %s\n", tostring(value)))
+io.write(string.format("Lua - %s bytes sent\n", tostring(value)))
