@@ -31,6 +31,7 @@ void sigchld_handler(int s)
     errno = saved_errno;
 }
 
+
 // get sockaddr, IPv4 or IPv6:
 void *get_in_addr(struct sockaddr *sa)
 {
@@ -39,6 +40,26 @@ void *get_in_addr(struct sockaddr *sa)
     }
 
     return &(((struct sockaddr_in6*)sa)->sin6_addr);
+}
+
+// This is necessary because sommetimes the packets don't get sent entirely.
+int sendall(int connection, char *buffer, int *length, int isLast){
+  int bytesSent = 0;  
+  
+  int bytesNow;
+  while(bytesSent < *length){
+    bytesNow = send(connection, 
+      buffer+bytesSent, (*length)-bytesSent , 
+      isLast?0:MSG_MORE);
+    
+    if(bytesNow == -1) break;
+    
+    bytesSent += bytesNow;
+  }
+  
+  *length = bytesSent;
+  
+  return bytesNow==-1?-1:0;
 }
 
 int main(void){
@@ -112,7 +133,6 @@ int main(void){
 
   printf("server: waiting for connections...\n");
 
-  
   int conn_fd;  // connected socket file descriptor
   struct sockaddr_storage their_addr; // connector's address information  
   socklen_t sin_size;

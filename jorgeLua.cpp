@@ -1,16 +1,39 @@
 #include <jorgeLua.h>
+#include <jorgeNetwork.h>
 
 #include <sys/socket.h>
+#include <stdlib.h>
 #include <string.h>
 
-int glob_conn_fd; // This global is the way jluaf functions can do network stuff
+// This global is the way jluaf functions can interact with requests
+struct jlua_response_body_node{
+  char *data;
+  struct jlua_response_body_node *next;
+};
+
+struct jlua_global_data{
+  int connection;
+  jlua_response_body_node *response_body;
+  int response_body_length;
+  char *response_header;
+};
+
+struct jlua_global_data jData;
+
 void jlua_interpret(int conn_fd){
   
-  glob_conn_fd = conn_fd;
+  // Setup connection data
+  jData.connection = conn_fd;
+  jData.response_body_length = 0;
+  jData.response_body = NULL;
   
+  // Deal with request data
+  
+  // Fire up interpreter
   int luaStatus;
   lua_State *L = luaL_newstate();
   
+  // TODO Configure libs opening
   luaL_openlibs(L);
   lua_register(L, "echo", jluaf_echo);
   
@@ -22,9 +45,41 @@ void jlua_interpret(int conn_fd){
 
   luaStatus = lua_pcall(L, 0, LUA_MULTRET, 0);
   if(luaStatus){
+    // Todo HTTP error on script error
     jlua_print_error(L);
     return;
   }
+  
+  // Send Header
+  char headerTemplate[] = 
+  "HTTP/1.1 200 OK\n"
+  "Server: Jorge/0.2\n"
+  "Content-Length: %d\n\n";
+  
+  char* header = (char*) malloc(sizeof(*header) * (strlen(headerTemplate) + 10));
+  
+  int headerLen = sprintf(header, headerTemplate, 
+    jData.response_body_length);
+  
+  sendall(jData.connection, header, &headerLen, 0);
+  
+  // Send body
+  jlua_response_body_node *walker = jData.response_body;
+  jlua_response_body_node *last;
+  int i =0;
+  printf("pointer: %p\n", jData.response_body);
+  while(walker != NULL){
+    int bodyLen = strlen(walker->data);
+    sendall(jData.connection, walker->data, &bodyLen, !walker->next);
+    
+    last    = walker;
+    walker  = walker->next;  
+    printf("Free %d: %s\n", ++i, last->data);
+    free(last->data);
+    printf("Free struct %d\n", i);
+    free(last);
+  }
+  
   
   lua_close(L);
 }
@@ -38,38 +93,30 @@ void jlua_print_error(lua_State* L) {
   lua_pop(L, 1);
 }
 
-int jluaf_tst(lua_State* L){
-  int args = lua_gettop(L);
-  
-  printf("tst() was called with %d arguments:\n", args);
-  
-  for(int n=1; n<=args; n++){
-    printf(" Argument %d: '%s'\n", n, lua_tostring(L, n));
-  }
-  
-  lua_pushnumber(L, 123);
-  
-  return 1;
-}
-
 int jluaf_echo(lua_State* L){
   
   int args = lua_gettop(L);
-  int msgLen, retValue = 0;
- 
+  printf("Echo with %d args\n", args);
   for(int i=1; i<=args; i++){
-
-    msgLen = strlen(lua_tostring(L, i));
     
-    int tValue = send(glob_conn_fd, lua_tostring(L, i), msgLen, i==args?0:MSG_MORE);
+    struct jlua_response_body_node *response_body_end;
     
-    if(tValue == -1){
-      retValue = tValue;
-      break;
-    }else retValue += tValue;
+    response_body_end = 
+      (struct jlua_response_body_node*) malloc(sizeof(*response_body_end)+1);
+    
+    response_body_end->next = NULL;
+    response_body_end->data = strdup(lua_tostring(L, i));
+    jData.response_body_length += strlen(response_body_end->data);
+    // TODO maybe checkout and correct linebreaks
+    
+    if(jData.response_body){
+      struct jlua_response_body_node *walker = jData.response_body;
+      
+      while(walker->next != NULL) walker = walker->next;
+      
+      walker->next = response_body_end;
+    }else jData.response_body = response_body_end;
   }
-  
-  lua_pushnumber(L, retValue);
   
   return 1;
 }

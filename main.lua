@@ -1,6 +1,15 @@
 io.write("Lua - Calling echo() ...\n")
 
-local value = echo("Firste", "Second\n", 112233, "end")
-value = value + echo("Firste", "SecondRUN\n", "end for real this time")
+local body = [[
+<html>
+  <head>
+    <title>Jorge Root</title>
+  </head>
+  <body>
+    <h1>ELLO WORLD!</h1>
+  </body>
+</html>
+]]
+local totalLen = echo(body)
 
 io.write(string.format("Lua - %s bytes sent\n", tostring(value)))
