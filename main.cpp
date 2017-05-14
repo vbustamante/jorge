@@ -155,9 +155,24 @@ int main(void){
 
     if (!fork()) { // this is the child process
       close(sock_fd); // child doesn't need the listener
-       
+      
+      // Get request
+      int readBytes = 127;
+      
+      char buffer[128];
+      while(readBytes == 127){
+        readBytes = recv(conn_fd, buffer, 127, 0);
+        if(readBytes != 127){
+          buffer[readBytes]='\0';
+          printf("Read %d bytes last time\n", readBytes);
+        }
+        printf("BLK\n %s \nEND\n", buffer);
+      }
+      
+      // Defer everything to the Lua subsystem
       jlua_interpret(conn_fd);
       
+      // Cleanup and close child
       close(conn_fd);
       exit(0);
     }

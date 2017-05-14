@@ -67,16 +67,16 @@ void jlua_interpret(int conn_fd){
   jlua_response_body_node *walker = jData.response_body;
   jlua_response_body_node *last;
   int i =0;
-  printf("pointer: %p\n", jData.response_body);
+
   while(walker != NULL){
     int bodyLen = strlen(walker->data);
     sendall(jData.connection, walker->data, &bodyLen, !walker->next);
     
     last    = walker;
     walker  = walker->next;  
-    printf("Free %d: %s\n", ++i, last->data);
+
     free(last->data);
-    printf("Free struct %d\n", i);
+
     free(last);
   }
   
