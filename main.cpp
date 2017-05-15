@@ -118,7 +118,7 @@ int main(void){
       jnet_get_req_ip((struct sockaddr *)&their_addr),
       incoming_ip, sizeof incoming_ip);
     
-    printf("\nserver: got connection from %s\n", incoming_ip);
+    //printf("\nserver: got connection from %s\n", incoming_ip);
 
     if (!fork()) { // this is the child process
       close(sock_fd); // child doesn't need the listener
