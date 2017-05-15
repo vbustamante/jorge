@@ -1,5 +1,3 @@
-io.write("Lua - Calling echo() ...\n")
-
 local body = [[
 <html>
   <head>
@@ -12,4 +10,4 @@ local body = [[
 ]]
 local totalLen = echo(body)
 
-io.write(string.format("Lua - %s bytes sent\n", tostring(value)))
+--io.write("Lua - "..totalLen.." bytes sent\n")

@@ -4,15 +4,13 @@
 #include <errno.h>
 #include <string.h>
 
-#include <sys/types.h>
 #include <sys/socket.h>
 #include <netdb.h>
-#include <netinet/in.h>
 #include <arpa/inet.h>
 #include <sys/wait.h>
-#include <signal.h>
 
 #include <jorgeLua.h>
+#include <jorgeNetwork.h>
 
 // TODO embed sqlite just for fun?
 
@@ -29,37 +27,6 @@ void sigchld_handler(int s)
     while(waitpid(-1, NULL, WNOHANG) > 0);
 
     errno = saved_errno;
-}
-
-
-// get sockaddr, IPv4 or IPv6:
-void *get_in_addr(struct sockaddr *sa)
-{
-    if (sa->sa_family == AF_INET) {
-        return &(((struct sockaddr_in*)sa)->sin_addr);
-    }
-
-    return &(((struct sockaddr_in6*)sa)->sin6_addr);
-}
-
-// This is necessary because sommetimes the packets don't get sent entirely.
-int sendall(int connection, char *buffer, int *length, int isLast){
-  int bytesSent = 0;  
-  
-  int bytesNow;
-  while(bytesSent < *length){
-    bytesNow = send(connection, 
-      buffer+bytesSent, (*length)-bytesSent , 
-      isLast?0:MSG_MORE);
-    
-    if(bytesNow == -1) break;
-    
-    bytesSent += bytesNow;
-  }
-  
-  *length = bytesSent;
-  
-  return bytesNow==-1?-1:0;
 }
 
 int main(void){
@@ -80,9 +47,8 @@ int main(void){
   }
   
   
-  int sock_fd;
+  int sock_fd = -1;
   {
-    int yes=1;
     struct addrinfo *p;
     for(p = servinfo; p != NULL; p = p->ai_next) {
       sock_fd = socket(p->ai_family, p->ai_socktype, p->ai_protocol);
@@ -92,9 +58,10 @@ int main(void){
         continue;
       }
 
-      if (setsockopt(sock_fd, SOL_SOCKET, SO_REUSEADDR, &yes,
+      int reuseAddress=1;
+      if (setsockopt(sock_fd, SOL_SOCKET, SO_REUSEADDR, &reuseAddress,
           sizeof(int)) == -1) {
-        perror("setsockopt");
+        perror("server: sock options");
         exit(1);
       }
 
@@ -108,7 +75,7 @@ int main(void){
     }
     
     if (p == NULL)  {
-      fprintf(stderr, "server: failed to bind\n");
+      fprintf(stderr, "server: failed socket startup\n");
       exit(1);
     }
   }
@@ -148,27 +115,17 @@ int main(void){
 
     inet_ntop(
       their_addr.ss_family,
-      get_in_addr((struct sockaddr *)&their_addr),
+      jnet_get_req_ip((struct sockaddr *)&their_addr),
       incoming_ip, sizeof incoming_ip);
     
-    printf("server: got connection from %s\n", incoming_ip);
+    printf("\nserver: got connection from %s\n", incoming_ip);
 
     if (!fork()) { // this is the child process
       close(sock_fd); // child doesn't need the listener
       
       // Get request
-      int readBytes = 127;
-      
-      char buffer[128];
-      while(readBytes == 127){
-        readBytes = recv(conn_fd, buffer, 127, 0);
-        if(readBytes != 127){
-          buffer[readBytes]='\0';
-          printf("Read %d bytes last time\n", readBytes);
-        }
-        printf("BLK\n %s \nEND\n", buffer);
-      }
-      
+      struct jnet_request_data req_data = jnet_parse_request(conn_fd);
+
       // Defer everything to the Lua subsystem
       jlua_interpret(conn_fd);
       

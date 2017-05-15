@@ -1,7 +1,6 @@
 #include <jorgeLua.h>
 #include <jorgeNetwork.h>
 
-#include <sys/socket.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -58,19 +57,18 @@ void jlua_interpret(int conn_fd){
   
   char* header = (char*) malloc(sizeof(*header) * (strlen(headerTemplate) + 10));
   
-  int headerLen = sprintf(header, headerTemplate, 
+  size_t headerLen = (size_t) sprintf(header, headerTemplate,
     jData.response_body_length);
   
-  sendall(jData.connection, header, &headerLen, 0);
+  jnet_send_all(jData.connection, header, &headerLen, 0);
   
   // Send body
   jlua_response_body_node *walker = jData.response_body;
   jlua_response_body_node *last;
-  int i =0;
 
   while(walker != NULL){
-    int bodyLen = strlen(walker->data);
-    sendall(jData.connection, walker->data, &bodyLen, !walker->next);
+    size_t bodyLen = strlen(walker->data);
+    jnet_send_all(jData.connection, walker->data, &bodyLen, !walker->next);
     
     last    = walker;
     walker  = walker->next;  
@@ -79,8 +77,7 @@ void jlua_interpret(int conn_fd){
 
     free(last);
   }
-  
-  
+
   lua_close(L);
 }
 
@@ -89,14 +86,14 @@ void jlua_print_error(lua_State* L) {
   // The error message is on top of the stack.
   // Fetch it, print it and then pop it off the stack.
   const char* message = lua_tostring(L, -1);
-  fprintf(stderr, message);
+  fprintf(stderr, "%s\n", message);
   lua_pop(L, 1);
 }
 
 int jluaf_echo(lua_State* L){
   
   int args = lua_gettop(L);
-  printf("Echo with %d args\n", args);
+  //printf("Echo with %d args\n", args);
   for(int i=1; i<=args; i++){
     
     struct jlua_response_body_node *response_body_end;
@@ -106,7 +103,10 @@ int jluaf_echo(lua_State* L){
     
     response_body_end->next = NULL;
     response_body_end->data = strdup(lua_tostring(L, i));
-    jData.response_body_length += strlen(response_body_end->data);
+    size_t body_bytes = strlen(response_body_end->data);
+    jData.response_body_length += body_bytes;
+
+    lua_pushnumber(L, body_bytes);
     // TODO maybe checkout and correct linebreaks
     
     if(jData.response_body){
