@@ -19,7 +19,7 @@ struct jlua_global_data{
 
 struct jlua_global_data jData;
 
-void jlua_interpret(int conn_fd){
+void jlua_interpret(int conn_fd, char *request){
   
   // Setup connection data
   jData.connection = conn_fd;
@@ -36,18 +36,44 @@ void jlua_interpret(int conn_fd){
   luaL_openlibs(L);
   lua_register(L, "echo", jluaf_echo);
   
+  // Lua push texts
+
   luaStatus = luaL_loadfile(L, "../main.lua");
   if(luaStatus){
     jlua_print_error(L);
     return;
   }
 
-  luaStatus = lua_pcall(L, 0, LUA_MULTRET, 0);
+  luaStatus = lua_pcall(L, 0, 0, 0);
   if(luaStatus){
     // Todo HTTP error on script error
     jlua_print_error(L);
     return;
   }
+
+  luaStatus = luaL_loadfile(L, "../parser.lua");  
+  if(luaStatus){
+    jlua_print_error(L);
+    return;
+  }
+
+  luaStatus = lua_pcall(L, 0, 0, 0);
+  if(luaStatus){
+    // Todo HTTP error on script error
+    jlua_print_error(L);
+    return;
+  }
+  
+  lua_getglobal(L, "parseRequest");
+  lua_pushstring(L, request);
+  
+  luaStatus = lua_pcall(L, 1, 0, 0);
+  if(luaStatus){
+    // Todo HTTP error on script error
+    jlua_print_error(L);
+    return;
+  }
+  
   
   // Send Header
   char headerTemplate[] = 

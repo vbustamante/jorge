@@ -124,10 +124,11 @@ int main(void){
       close(sock_fd); // child doesn't need the listener
       
       // Get request
-      struct jnet_request_data req_data = jnet_parse_request(conn_fd);
+      //struct jnet_request_data req_data = jnet_parse_request(conn_fd);
+      char *request = jnet_parse_request(conn_fd); // TODO this only receives, it parses nothing 
 
       // Defer everything to the Lua subsystem
-      jlua_interpret(conn_fd);
+      jlua_interpret(conn_fd, request);
       
       // Cleanup and close child
       close(conn_fd);

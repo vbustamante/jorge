@@ -4,10 +4,10 @@ local body = [[
     <title>Jorge Root</title>
   </head>
   <body>
-    <h1>ELLO WORLD!</h1>
+    <h1>TONY WORLD!</h1>
   </body>
 </html>
 ]]
 local totalLen = echo(body)
 
---io.write("Lua - "..totalLen.." bytes sent\n")
+io.write("Lua - "..totalLen.." bytes sent\n")

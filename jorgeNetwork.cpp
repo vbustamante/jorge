@@ -12,6 +12,16 @@ void *jnet_get_req_ip(struct sockaddr *sa){
   return &(((struct sockaddr_in6*)sa)->sin6_addr);
 }
 
+char *jnet_parse_request(int conn){
+  ssize_t readBytes = JNET_REQ_BUFF_SIZE -1;
+  char *buffer = (char *)malloc(JNET_REQ_BUFF_SIZE * sizeof(char));
+  size_t buffer_offset = 0;
+
+  readBytes = recv(conn, buffer + buffer_offset, JNET_REQ_BUFF_SIZE-1-buffer_offset, 0);
+
+  return buffer;
+}
+/*
 struct jnet_request_data jnet_parse_request(int conn){
 
   ssize_t readBytes = JNET_REQ_BUFF_SIZE -1;
@@ -104,7 +114,7 @@ struct jnet_request_data jnet_parse_request(int conn){
     }
 
     // TODO fix the tail \n header element the parser generates
-    printf("%s - %s\n", req.verb, req.path);
+    printf("|%s|- |%s|\n", req.verb, req.path);
     struct jnet_request_header *header_walker = req.header;
     while(header_walker != NULL){
       printf("%s(%zu): %s(%zu)\n",
@@ -120,7 +130,7 @@ struct jnet_request_data jnet_parse_request(int conn){
 
   return req;
 }
-
+*/
 
 // This is necessary because sometimes the packets don't get sent entirely.
 ssize_t jnet_send_all(int connection, char *buffer, size_t *length, int isLast){
