@@ -15,39 +15,73 @@ void *jnet_get_req_ip(struct sockaddr *sa){
   return &(((struct sockaddr_in6*)sa)->sin6_addr);
 }
 
+
+struct buffer_node{
+    char data[JNET_REQ_BUFF_SIZE];
+    struct buffer_node* next;
+};
+
 char *jnet_read_request(int conn){
+
   ssize_t totalBytes = 0;
-  char *buffer = (char *)malloc(JNET_REQ_BUFF_SIZE * sizeof(char));
-  size_t buffer_offset = 0;
+  struct buffer_node *first_buffer = (struct buffer_node*) malloc(sizeof *first_buffer);
+  struct buffer_node *last_buffer = first_buffer;
+  last_buffer->next = NULL;
+  last_buffer->data[0] = '\0';
 
   int loops = 0;
   struct timeval begin;
   gettimeofday(&begin , NULL);
 
   while (true) {
+    loops++;
     struct timeval now;
     gettimeofday(&now , NULL);
     double elapsedSeconds = (now.tv_sec - begin.tv_sec) + 1e-6 * (now.tv_usec - begin.tv_usec);
 
-    //if you got some data, then break after timeout
-    if( totalBytes > 0 && elapsedSeconds > JNET_RECV_TIMEOUT ) break;
-    //if you got no data at all, wait a little longer, twice the timeout
-    else if( elapsedSeconds > JNET_RECV_TIMEOUT*2) break;
+    //if you got some data, then wait a little more time
+    if( totalBytes > 0 && elapsedSeconds > JNET_RECV_TIMEEXTRA ) break;
+    //if you got no data at all, wait timeout
+    else if( elapsedSeconds > JNET_RECV_TIMEOUT) break;
 
-    memset(buffer, 0, JNET_REQ_BUFF_SIZE);
-    ssize_t recvBytes = recv(conn, buffer + buffer_offset, JNET_REQ_BUFF_SIZE-1-buffer_offset, MSG_DONTWAIT);
+    if(!last_buffer->next){
+      last_buffer->next = (struct buffer_node*) malloc(sizeof *last_buffer->next);
+      last_buffer->next->next = NULL;
+      last_buffer->next->data[0] = '\0';
+    }
+
+    ssize_t recvBytes = recv(conn, last_buffer->data, JNET_REQ_BUFF_SIZE-1, MSG_DONTWAIT);
     // NONPORTABLE MSG_DONTWAIT makes single call non blocking, but is only supported on linux
 
     if(recvBytes > 0) {
       totalBytes += recvBytes;
-      printf("%d: \n%s\n(%zu out of %d)\n", ++loops, buffer, recvBytes, JNET_REQ_BUFF_SIZE);
+      //printf("%d: \n%s\n(%zu out of %d)\n", loops, last_buffer->data, recvBytes, JNET_REQ_BUFF_SIZE-1);
+      last_buffer = last_buffer->next;
       gettimeofday(&begin, NULL);
     }
-    //else if(recvBytes == -1) printf("Oh dear, something went wrong with read()! %s\n", strerror(errno));
     else usleep(100000); // Wait a little if nothing was received
   }
+  //printf("bytes: %zu\n", totalBytes);
+  char *request = (char *)malloc((totalBytes+1) * (sizeof *request));
+  char *endofstring = request;
+  struct buffer_node *walker;
+  walker = first_buffer;
+  while(walker->data[0] != '\0'){
+    strcpy(endofstring, walker->data);
+    endofstring += strlen(walker->data);
 
-  return buffer;
+//    printf("----------------------------------\n");
+//    printf("\nSOURCE := %s\n", walker->data);
+//    printf("\nTHIS := %s\n", endofstring);
+//    printf("\nFULL := %s\n", request);
+
+    last_buffer = walker;
+    walker = walker->next;
+    free(last_buffer);
+  }
+  free(walker);
+
+  return request;
 }
 /*
 struct jnet_request_data jnet_parse_request(int conn){

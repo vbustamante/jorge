@@ -3,7 +3,6 @@
 
 #include <stdlib.h>
 #include <string.h>
-#include <cmath>
 
 // This global is the way jluaf functions can interact with requests
 struct jlua_response_body_node{
@@ -33,12 +32,34 @@ void jlua_interpret(int conn_fd, char *request){
   int luaStatus;
   lua_State *L = luaL_newstate();
   
-  // TODO Configure libs opening
+  // Init functions
   luaL_openlibs(L);
   lua_register(L, "echo", jluaf_echo);
   lua_register(L, "setHeader", jluaf_setHeader);
 
-  // Lua push texts
+  // Load Scripts
+  luaStatus = luaL_loadfile(L, "../parser.lua");  
+  if(luaStatus){
+    jlua_print_error(L);
+    return;
+  }
+
+  luaStatus = lua_pcall(L, 0, 0, 0);
+  if(luaStatus){
+    jlua_print_error(L);
+    return;
+  }
+  
+  lua_getglobal(L, "parseRequest");
+  lua_pushstring(L, request);
+  
+  luaStatus = lua_pcall(L, 1, 0, 0);
+  if(luaStatus){
+    // Todo HTTP error on script error
+    jlua_print_error(L);
+    return;
+  }
+
 
   luaStatus = luaL_loadfile(L, "../main.lua");
   if(luaStatus){
@@ -53,30 +74,7 @@ void jlua_interpret(int conn_fd, char *request){
     return;
   }
 
-  luaStatus = luaL_loadfile(L, "../parser.lua");  
-  if(luaStatus){
-    jlua_print_error(L);
-    return;
-  }
 
-  luaStatus = lua_pcall(L, 0, 0, 0);
-  if(luaStatus){
-    // Todo HTTP error on script error
-    jlua_print_error(L);
-    return;
-  }
-  
-  lua_getglobal(L, "parseRequest");
-  lua_pushstring(L, request);
-  
-  luaStatus = lua_pcall(L, 1, 0, 0);
-  if(luaStatus){
-    // Todo HTTP error on script error
-    jlua_print_error(L);
-    return;
-  }
-  
-  
   // Send Header
   size_t headerLen = strlen(jData.response_header);
   jnet_send_all(jData.connection, jData.response_header, &headerLen, 0);

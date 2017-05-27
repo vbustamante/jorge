@@ -20,7 +20,7 @@ local body = [[
 
 local bodyLen = echo(body)
 
-header:gsub("\n", "\r\n"):gsub("${bodyLen}", bodyLen)
+local header = header:gsub("\n", "\r\n"):gsub("$bodyLen", bodyLen)
 local headerLen = setHeader(header)
 
 io.write("Lua - "..bodyLen+headerLen.." bytes sent, H:"..headerLen.." & B:"..bodyLen.."\n")
