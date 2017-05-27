@@ -11,6 +11,7 @@
 
 #include <jorgeLua.h>
 #include <jorgeNetwork.h>
+#include <pthread.h>
 
 // TODO embed sqlite just for fun?
 
@@ -19,14 +20,20 @@
 #define BACKLOG 10   // how many pending connections queue will hold
 
 
-void sigchld_handler(int s)
-{
-    // waitpid() might overwrite errno, so we save and restore it:
-    int saved_errno = errno;
+void *req_thread(void *data){ // A thread running this is spawned for every request TODO thread pool?
+  // Copy data from main thread
+  int conn_fd = *((int *)data);
+  free(data);
 
-    while(waitpid(-1, NULL, WNOHANG) > 0);
+  // Get request
+  //struct jnet_request_data req_data = jnet_parse_request(conn_fd);
+  char *request = jnet_read_request(conn_fd);
 
-    errno = saved_errno;
+  // Defer everything to the Lua subsystem
+  jlua_interpret(conn_fd, request);
+
+  // Cleanup and close child
+  close(conn_fd);
 }
 
 int main(void){
@@ -86,29 +93,20 @@ int main(void){
     perror("listen");
     exit(1);
   }
- 
-  // We override SIGCHLD to avoid the creation of zombie processess by the child 
-  struct sigaction sa;
-  sa.sa_handler = sigchld_handler; // reap all dead processes
-  sigemptyset(&sa.sa_mask);
-  sa.sa_flags = SA_RESTART;
-
-  if (sigaction(SIGCHLD, &sa, NULL) == -1) {
-    perror("sigaction");
-    exit(1);
-  }
 
   printf("server: waiting for connections...\n");
 
-  int conn_fd;  // connected socket file descriptor
-  struct sockaddr_storage their_addr; // connector's address information  
-  socklen_t sin_size;
-  char incoming_ip[INET6_ADDRSTRLEN];
-  
-  while(1) {  // main accept() loop
-    sin_size = sizeof their_addr;
-    conn_fd = accept(sock_fd, (struct sockaddr *)&their_addr, &sin_size);
-    if (conn_fd == -1) {
+  bool shutdown = false;  // connected socket file descriptor
+  while(!shutdown) {  // main accept() loop
+    char incoming_ip[INET6_ADDRSTRLEN];
+
+    struct sockaddr_storage their_addr; // connector's address information
+    socklen_t sin_size = sizeof their_addr;
+
+    int *conn_fd = (int *) malloc(sizeof(*conn_fd));
+
+    *conn_fd = accept(sock_fd, (struct sockaddr *)&their_addr, &sin_size);
+    if (*conn_fd == -1) {
       perror("accept");
       continue;
     }
@@ -118,24 +116,12 @@ int main(void){
       jnet_get_req_ip((struct sockaddr *)&their_addr),
       incoming_ip, sizeof incoming_ip);
     
-    //printf("\nserver: got connection from %s\n", incoming_ip);
+    printf("\nserver: got connection from %s\n", incoming_ip);
 
-    if (!fork()) { // this is the child process
-      close(sock_fd); // child doesn't need the listener
-      
-      // Get request
-      //struct jnet_request_data req_data = jnet_parse_request(conn_fd);
-      char *request = jnet_parse_request(conn_fd); // TODO this only receives, it parses nothing 
-
-      // Defer everything to the Lua subsystem
-      jlua_interpret(conn_fd, request);
-      
-      // Cleanup and close child
-      close(conn_fd);
-      exit(0);
-    }
-    close(conn_fd);  // parent doesn't need this
+    pthread_t req_thread_pointer;
+    pthread_create(&req_thread_pointer, 0, req_thread, conn_fd);
   }
 
   return 0;
 }
+

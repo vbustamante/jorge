@@ -3,6 +3,7 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <cmath>
 
 // This global is the way jluaf functions can interact with requests
 struct jlua_response_body_node{
@@ -35,7 +36,8 @@ void jlua_interpret(int conn_fd, char *request){
   // TODO Configure libs opening
   luaL_openlibs(L);
   lua_register(L, "echo", jluaf_echo);
-  
+  lua_register(L, "setHeader", jluaf_setHeader);
+
   // Lua push texts
 
   luaStatus = luaL_loadfile(L, "../main.lua");
@@ -76,18 +78,9 @@ void jlua_interpret(int conn_fd, char *request){
   
   
   // Send Header
-  char headerTemplate[] = 
-  "HTTP/1.1 200 OK\n"
-  "Server: Jorge/0.2\n"
-  "Content-Length: %d\n\n";
-  
-  char* header = (char*) malloc(sizeof(*header) * (strlen(headerTemplate) + 10));
-  
-  size_t headerLen = (size_t) sprintf(header, headerTemplate,
-    jData.response_body_length);
-  
-  jnet_send_all(jData.connection, header, &headerLen, 0);
-  
+  size_t headerLen = strlen(jData.response_header);
+  jnet_send_all(jData.connection, jData.response_header, &headerLen, 0);
+
   // Send body
   jlua_response_body_node *walker = jData.response_body;
   jlua_response_body_node *last;
@@ -144,5 +137,14 @@ int jluaf_echo(lua_State* L){
     }else jData.response_body = response_body_end;
   }
   
+  return 1;
+}
+
+int jluaf_setHeader(lua_State* L){
+
+  if(jData.response_header) free(jData.response_header);
+  jData.response_header = strdup(lua_tostring(L, 1));
+
+  lua_pushnumber(L, strlen(jData.response_header));
   return 1;
 }

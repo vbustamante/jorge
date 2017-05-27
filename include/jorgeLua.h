@@ -8,4 +8,6 @@ void jlua_print_error(lua_State* state);
 
 int jluaf_echo(lua_State* L);
 
+int jluaf_setHeader(lua_State* L);
+
 #endif

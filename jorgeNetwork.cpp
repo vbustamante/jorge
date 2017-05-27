@@ -2,6 +2,9 @@
 #include <jorgeNetwork.h>
 #include <string.h>
 #include <stdlib.h>
+#include <sys/time.h>
+#include <unistd.h>
+#include <errno.h>
 
 // get sockaddr, IPv4 or IPv6:
 void *jnet_get_req_ip(struct sockaddr *sa){
@@ -12,12 +15,37 @@ void *jnet_get_req_ip(struct sockaddr *sa){
   return &(((struct sockaddr_in6*)sa)->sin6_addr);
 }
 
-char *jnet_parse_request(int conn){
-  ssize_t readBytes = JNET_REQ_BUFF_SIZE -1;
+char *jnet_read_request(int conn){
+  ssize_t totalBytes = 0;
   char *buffer = (char *)malloc(JNET_REQ_BUFF_SIZE * sizeof(char));
   size_t buffer_offset = 0;
 
-  readBytes = recv(conn, buffer + buffer_offset, JNET_REQ_BUFF_SIZE-1-buffer_offset, 0);
+  int loops = 0;
+  struct timeval begin;
+  gettimeofday(&begin , NULL);
+
+  while (true) {
+    struct timeval now;
+    gettimeofday(&now , NULL);
+    double elapsedSeconds = (now.tv_sec - begin.tv_sec) + 1e-6 * (now.tv_usec - begin.tv_usec);
+
+    //if you got some data, then break after timeout
+    if( totalBytes > 0 && elapsedSeconds > JNET_RECV_TIMEOUT ) break;
+    //if you got no data at all, wait a little longer, twice the timeout
+    else if( elapsedSeconds > JNET_RECV_TIMEOUT*2) break;
+
+    memset(buffer, 0, JNET_REQ_BUFF_SIZE);
+    ssize_t recvBytes = recv(conn, buffer + buffer_offset, JNET_REQ_BUFF_SIZE-1-buffer_offset, MSG_DONTWAIT);
+    // NONPORTABLE MSG_DONTWAIT makes single call non blocking, but is only supported on linux
+
+    if(recvBytes > 0) {
+      totalBytes += recvBytes;
+      printf("%d: \n%s\n(%zu out of %d)\n", ++loops, buffer, recvBytes, JNET_REQ_BUFF_SIZE);
+      gettimeofday(&begin, NULL);
+    }
+    //else if(recvBytes == -1) printf("Oh dear, something went wrong with read()! %s\n", strerror(errno));
+    else usleep(100000); // Wait a little if nothing was received
+  }
 
   return buffer;
 }

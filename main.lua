@@ -1,4 +1,13 @@
+local header = [[
+HTTP/1.1 200 OK
+Server: Jorge/0.2
+Content-Length: $bodyLen
+Content-Type: text/html
+
+]]
+
 local body = [[
+<!DOCTYPE html>
 <html>
   <head>
     <title>Jorge Root</title>
@@ -8,6 +17,10 @@ local body = [[
   </body>
 </html>
 ]]
-local totalLen = echo(body)
 
-io.write("Lua - "..totalLen.." bytes sent\n")
+local bodyLen = echo(body)
+
+header:gsub("\n", "\r\n"):gsub("${bodyLen}", bodyLen)
+local headerLen = setHeader(header)
+
+io.write("Lua - "..bodyLen+headerLen.." bytes sent, H:"..headerLen.." & B:"..bodyLen.."\n")

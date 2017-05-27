@@ -1,5 +1,5 @@
 function parseRequest(request)
-  io.write("Request\n")
+  io.write("Lua parser:\n")
   request = request:gsub("\r\n", "\\r\\n\n")
-  io.write(request)
+  --io.write(request)
 end

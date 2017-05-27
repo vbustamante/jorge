@@ -12,6 +12,6 @@ set(SOURCE_FILES main.cpp jorgeLua.cpp jorgeNetwork.cpp)
 #add_executable(SpacInvaders ${SOURCE_FILES} ${CMAKE_CURRENT_SOURCE_DIR}/resources/meta/Program.rc)
 add_executable(Jorge ${SOURCE_FILES})
 
-target_link_libraries(Jorge liblua)
+target_link_libraries(Jorge liblua pthread)
 
 
