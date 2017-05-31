@@ -16,9 +16,19 @@ struct jnet_request_header{
 
 struct jnet_request_data{
   char *verb;
-  char *path;
+  char path[4];
   struct jnet_request_header *header;
   char *body;
+};
+
+
+enum jnet_parser_state{
+  jnet_parser_state_verb,
+  jnet_parser_state_path,
+  jnet_parser_state_version,
+  jnet_parser_state_name,
+  jnet_parser_state_value,
+  jnet_parser_state_halt
 };
 
 void *jnet_get_req_ip(struct sockaddr *sa);
