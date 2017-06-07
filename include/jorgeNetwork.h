@@ -9,26 +9,30 @@
 #define JNET_RECV_TIMEEXTRA .001
 
 struct jnet_request_header{
-    char *field;
-    char *value;
-    struct jnet_request_header *next;
+  char *field;
+  char *value;
+  struct jnet_request_header *next;
 };
 
 struct jnet_request_data{
   char *verb;
-  char path[4];
+  char *path;
+  char version;
   struct jnet_request_header *header;
   char *body;
 };
 
 
 enum jnet_parser_state{
-  jnet_parser_state_verb,
-  jnet_parser_state_path,
+  jnet_parser_state_verb_begin,
+  jnet_parser_state_verb_end,
+  jnet_parser_state_path_begin,
+  jnet_parser_state_path_end,
   jnet_parser_state_version,
-  jnet_parser_state_name,
+  jnet_parser_state_name_begin,
   jnet_parser_state_value,
-  jnet_parser_state_halt
+  jnet_parser_state_halt,
+  jnet_parser_state_err
 };
 
 void *jnet_get_req_ip(struct sockaddr *sa);

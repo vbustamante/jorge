@@ -5,6 +5,7 @@
 #include <sys/time.h>
 #include <unistd.h>
 #include <errno.h>
+#include <ctype.h>
 
 // get sockaddr, IPv4 or IPv6:
 void *jnet_get_req_ip(struct sockaddr *sa){
@@ -92,14 +93,110 @@ char *jnet_read_request(int conn){
    *  TODO Also refactor this function so it returns the struct instead of the string
    */
   struct jnet_request_data req_data;
-  int httpParserState =  jnet_parser_state_verb;
+  int httpParserState =  jnet_parser_state_verb_begin;
+  int parserIndex = 0;
   
-  while(httpParserState != jnet_parser_state_halt){
+  while(
+    (httpParserState != jnet_parser_state_halt) &&
+    (httpParserState != jnet_parser_state_err)
+  ){
+    char *thisChar = &(request[parserIndex]);
+    char caractere = *thisChar; 
     switch (httpParserState){
+      case jnet_parser_state_verb_begin:
+        if(*thisChar == ' ' || *thisChar == '\t'){}
+        else if(
+          (*thisChar >= 'A' && *thisChar <= 'Z') ||
+          (*thisChar >= 'a' && *thisChar <= 'z')
+        ){
+          req_data.verb = thisChar;
+          httpParserState = jnet_parser_state_verb_end;
+        }else{
+          httpParserState = jnet_parser_state_err;          
+        }
+        parserIndex++;
+      break;
+      
+      case jnet_parser_state_verb_end:
+        if(*thisChar == ' ' || *thisChar == '\t'){     
+          *thisChar = '\0';
+          httpParserState = jnet_parser_state_path_begin;          
+        }
+        else if(
+          (*thisChar >= 'A' && *thisChar <= 'Z') ||
+          (*thisChar >= 'a' && *thisChar <= 'z') 
+        ){}
+        else{
+          httpParserState = jnet_parser_state_err;
+        }
+        
+        parserIndex++;
+      break;
+      
+      case jnet_parser_state_path_begin:
+        if(*thisChar == ' ' || *thisChar == '\t'){}
+        else if(
+          (*thisChar == '/')
+        ){
+          req_data.path = thisChar;
+          httpParserState = jnet_parser_state_path_end;  
+        }
+        else{
+          httpParserState = jnet_parser_state_err;
+        }
+        
+        parserIndex++;
+      break;
+      
+      case jnet_parser_state_path_end:
+        if(*thisChar == ' ' || *thisChar == '\t'){     
+          *thisChar = '\0';
+          httpParserState = jnet_parser_state_version;          
+        }
+        else if(
+          (*thisChar >= 'A' && *thisChar <= 'Z') ||
+          (*thisChar >= 'a' && *thisChar <= 'z') ||
+          (*thisChar >= '0' && *thisChar <= '9') ||
+          (*thisChar == '/')||(*thisChar == '.') ||
+          (*thisChar == '+')||(*thisChar == '-') ||
+          (*thisChar == '=')||(*thisChar == '?') ||
+          (*thisChar == '~')||(*thisChar == '%')
+        ){}
+        else{
+          httpParserState = jnet_parser_state_err;
+        }
+        parserIndex++;
+      break;
+      case  jnet_parser_state_version:
+        if(*thisChar == ' ' || *thisChar == '\t') parserIndex++;
+        else if(
+          toupper(*(thisChar))   == 'H' &&
+          toupper(*(thisChar+1)) == 'T' &&
+          toupper(*(thisChar+2)) == 'T' &&
+          toupper(*(thisChar+3)) == 'P' &&
+          *(thisChar+4)          == '/' &&
+          *(thisChar+5)          == '1' &&
+          *(thisChar+6)          == '.' &&
+          ((*(thisChar+7)=='0') || (*(thisChar+7)=='1')) && // 0 or 1
+          *(thisChar+8)          == '\r' &&  
+          *(thisChar+9)          == '\n'  
+        ){
+          req_data.version = *(thisChar+7);
+          httpParserState = jnet_parser_state_halt; // Not parsing headers yet
+          parserIndex += 10;
+        }
+        else{
+          httpParserState = jnet_parser_state_err;
+          parserIndex++;
+        }
+      break;
+        
       default:
         httpParserState = jnet_parser_state_halt;
     }
   }
+  
+  printf("do %s on %s through http/1.%c\n", req_data.verb, req_data.path, req_data.version);
 
   return request;
 }
