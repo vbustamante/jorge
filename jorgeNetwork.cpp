@@ -24,7 +24,7 @@ struct buffer_node{
 
 // Receives a connected socket and receives all data until timeout
 // or until no data is coming.
-char *jnet_read_request(int conn){
+struct jnet_request_data jnet_read_request(int conn, char *request){
 
   ssize_t totalBytes = 0;
   struct buffer_node *first_buffer = (struct buffer_node*) malloc(sizeof *first_buffer);
@@ -65,7 +65,7 @@ char *jnet_read_request(int conn){
     else usleep(100000); // Wait a little if nothing was received
   }
   //printf("bytes: %zu\n", totalBytes);
-  char *request = (char *)malloc((totalBytes+1) * (sizeof *request));
+  request = (char *)malloc((totalBytes+1) * (sizeof *request));
   char *endofstring = request;
   struct buffer_node *walker;
   walker = first_buffer;
@@ -88,7 +88,7 @@ char *jnet_read_request(int conn){
   /*  At this point the whole request should be in `char *request`
    *  In jorgeNetwork.h there is both the request struct and the enum
    *  for the parser state machine.
-   *  The main idea here is to take advantage of the contiguous request array
+   *  The main idea here is to take advantage of the contiguous request string
    *  and only set the pointers on the struct to those memory locations.
    *  TODO Also refactor this function so it returns the struct instead of the string
    */
@@ -195,10 +195,8 @@ char *jnet_read_request(int conn){
         httpParserState = jnet_parser_state_halt;
     }
   }
-  
-  printf("do %s on %s through http/1.%c\n", req_data.verb, req_data.path, req_data.version);
 
-  return request;
+  return req_data;
 }
 
 // Receives string of data and a connected socket and sends it all.

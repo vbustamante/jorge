@@ -14,19 +14,25 @@
 #include <pthread.h>
 
 // TODO embed sqlite just for fun?
+// TODO implement openssl
+// TODO port over to select on thread pools, instead of spawning worker threads
+// TODO make it full http compliant
 
 #define PORT "8080"  // the port users will be connecting to
 
 #define BACKLOG 10   // how many pending connections queue will hold
 
-// A thread running this is spawned for every request TODO thread pool?
+// A thread running this is spawned for every request 
 void *req_thread(void *data){
   // Copy data from main thread
   int conn_fd = *((int *)data);
   free(data);
 
   // Get request
-  char *request = jnet_read_request(conn_fd);
+  char *request;
+  struct jnet_request_data req_data = jnet_read_request(conn_fd, request);
+  
+  printf("do %s on %s through http/1.%c\n", req_data.verb, req_data.path, req_data.version);
   // This probably will be changed after the parser is implemented
 
   // Defer everything to the Lua subsystem
@@ -56,6 +62,9 @@ int main(void){
       return 1;
     }
   }
+  
+  // Create default folders and files
+  jlua_setup_environment();
   
   // Get socket
   int sock_fd = -1;

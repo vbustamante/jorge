@@ -16,6 +16,19 @@ struct jlua_global_data{
   char *response_header;
 };
 
+//Creates the default folder and hello world lua script, if not existing
+void jlua_setup_environment(){
+  
+  int mkdirStatus = mkdir(JLUA_SCRIPT_PATH, S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH );
+  if (mkdirStatus != -1){
+    printf("Assuming setup.\nCreating jorgeScripts folder and index.lua.\nWelcome to jorge!\n");
+    
+    FILE *helloWorldFile = fopen (JLUA_SCRIPT_PATH"/index.lua","w");
+    fputs (JLUA_HELLOW_TEXT, helloWorldFile); // Saves data defined on jorgeLua.h
+    fclose (helloWorldFile);
+  }
+}
+
 // This global is the way jluaf functions can interact with request data
 // This should be only accessible inside the jLua module.
 struct jlua_global_data jData;
@@ -43,30 +56,7 @@ void jlua_interpret(int conn_fd, char *request){
   lua_register(L, "setHeader", jluaf_setHeader);
 
   // Load Scripts
-  luaStatus = luaL_loadfile(L, JLUA_SCRIPT_PATH "parser.lua");  
-  if(luaStatus){
-    jlua_print_error(L);
-    return;
-  }
-
-  luaStatus = lua_pcall(L, 0, 0, 0);
-  if(luaStatus){
-    jlua_print_error(L);
-    return;
-  }
-  
-  lua_getglobal(L, "parseRequest");
-  lua_pushstring(L, request);
-  
-  luaStatus = lua_pcall(L, 1, 0, 0);
-  if(luaStatus){
-    // Todo HTTP error on script error
-    jlua_print_error(L);
-    return;
-  }
-
-
-  luaStatus = luaL_loadfile(L, JLUA_SCRIPT_PATH "main.lua");
+  luaStatus = luaL_loadfile(L, JLUA_SCRIPT_PATH "/index.lua");
   if(luaStatus){
     jlua_print_error(L);
     return;
