@@ -24,7 +24,7 @@ struct buffer_node{
 
 // Receives a connected socket and receives all data until timeout
 // or until no data is coming.
-struct jnet_request_data jnet_read_request(int conn, char *request){
+struct jnet_request_data jnet_read_request(int conn, char **request){
 
   ssize_t totalBytes = 0;
   struct buffer_node *first_buffer = (struct buffer_node*) malloc(sizeof *first_buffer);
@@ -65,10 +65,12 @@ struct jnet_request_data jnet_read_request(int conn, char *request){
     else usleep(100000); // Wait a little if nothing was received
   }
   //printf("bytes: %zu\n", totalBytes);
-  request = (char *)malloc((totalBytes+1) * (sizeof *request));
-  char *endofstring = request;
+  
+  *request = (char *)malloc((totalBytes+1) * (sizeof *request));
+  char *endofstring = (*request);
   struct buffer_node *walker;
   walker = first_buffer;
+  
   while(walker->data[0] != '\0'){
     strcpy(endofstring, walker->data);
     endofstring += strlen(walker->data);
@@ -76,7 +78,7 @@ struct jnet_request_data jnet_read_request(int conn, char *request){
 //    printf("----------------------------------\n");
 //    printf("\nSOURCE := %s\n", walker->data);
 //    printf("\nTHIS := %s\n", endofstring);
-//    printf("\nFULL := %s\n", request);
+//    printf("\nFULL := %s\n", (*request));
 
     last_buffer = walker;
     walker = walker->next;
@@ -100,7 +102,7 @@ struct jnet_request_data jnet_read_request(int conn, char *request){
     (httpParserState != jnet_parser_state_halt) &&
     (httpParserState != jnet_parser_state_err)
   ){
-    char *thisChar = &(request[parserIndex]);
+    char *thisChar = &((*request)[parserIndex]);
     char caractere = *thisChar; 
     switch (httpParserState){
       case jnet_parser_state_verb_begin:

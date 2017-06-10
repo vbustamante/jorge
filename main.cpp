@@ -29,16 +29,16 @@ void *req_thread(void *data){
   free(data);
 
   // Get request
-  char *request;
-  struct jnet_request_data req_data = jnet_read_request(conn_fd, request);
+  char *request; // We need to be able to free the full request data, so we get this
+  struct jnet_request_data req_data = jnet_read_request(conn_fd, &request);
   
   printf("do %s on %s through http/1.%c\n", req_data.verb, req_data.path, req_data.version);
-  // This probably will be changed after the parser is implemented
 
   // Defer everything to the Lua subsystem
-  jlua_interpret(conn_fd, request);
+  jlua_interpret(conn_fd, req_data);
 
-  // Cleanup
+  // Cleanup  
+  free(request);
   close(conn_fd);
 }
 

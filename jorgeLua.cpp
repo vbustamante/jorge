@@ -1,5 +1,4 @@
 #include <jorgeLua.h>
-#include <jorgeNetwork.h>
 
 #include <stdlib.h>
 #include <string.h>
@@ -26,6 +25,10 @@ void jlua_setup_environment(){
     FILE *helloWorldFile = fopen (JLUA_SCRIPT_PATH"/index.lua","w");
     fputs (JLUA_HELLOW_TEXT, helloWorldFile); // Saves data defined on jorgeLua.h
     fclose (helloWorldFile);
+    
+    FILE *notFoundFile = fopen (JLUA_SCRIPT_PATH"/404.lua","w");
+    fputs (JLUA_404_TEXT, notFoundFile); // Saves data defined on jorgeLua.h
+    fclose (notFoundFile);
   }
 }
 
@@ -37,7 +40,7 @@ struct jlua_global_data jData;
 // The entry point to the lua module. Gets a connection and request data,
 // starts a lua interpreter and runs the related scripts
 // TODO Select script to run based on the request path
-void jlua_interpret(int conn_fd, char *request){
+void jlua_interpret(int conn_fd, struct jnet_request_data request){
   
   // Setup connection data
   jData.connection = conn_fd;
@@ -55,13 +58,53 @@ void jlua_interpret(int conn_fd, char *request){
   lua_register(L, "echo", jluaf_echo);
   lua_register(L, "setHeader", jluaf_setHeader);
 
-  // Load Scripts
-  luaStatus = luaL_loadfile(L, JLUA_SCRIPT_PATH "/index.lua");
-  if(luaStatus){
-    jlua_print_error(L);
-    return;
-  }
+  // Load Script
+  {
 
+    int lastChar = 0;
+    while(request.path[lastChar] != '\0') lastChar++;
+    
+    // This here is a REALLY HACKY solution
+    // Since the line which contains the path ends with  ` HTTP/1.X\r\n`
+    // and the version is saved as value, we assume that `index.lua\0` 
+    // will fit there without messing up the next line.
+    // Coincidence? sure. but it works.
+    if(request.path[lastChar-1] == '/'){
+      request.path[lastChar++] = 'i';
+      request.path[lastChar++] = 'n';
+      request.path[lastChar++] = 'd';
+      request.path[lastChar++] = 'e';
+      request.path[lastChar++] = 'x';
+      request.path[lastChar++] = '.';
+      request.path[lastChar++] = 'l';
+      request.path[lastChar++] = 'u';
+      request.path[lastChar++] = 'a';
+      request.path[lastChar]   = '\0';
+    }
+    
+
+    size_t  scriptPathLength = strlen(JLUA_SCRIPT_PATH) + strlen(request.path) + 1;
+    char *  scriptPath = (char *) malloc(scriptPathLength * sizeof(*scriptPath)); 
+    
+    memset(scriptPath, '\0', scriptPathLength);
+    
+    strcat(scriptPath, JLUA_SCRIPT_PATH);
+    strcat(scriptPath, request.path);
+    
+    luaStatus = luaL_loadfile(L, scriptPath);
+    if(luaStatus){
+      jlua_print_error(L);
+      luaStatus = luaL_loadfile(L, JLUA_SCRIPT_PATH"/404.lua");
+      if(luaStatus){
+        jlua_print_error(L);
+        free(scriptPath);
+        return;
+      }
+    }
+    
+    free(scriptPath);
+  }
+  
   luaStatus = lua_pcall(L, 0, 0, 0);
   if(luaStatus){
     // Todo HTTP error on script error

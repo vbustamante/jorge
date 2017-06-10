@@ -38,7 +38,7 @@ enum jnet_parser_state{
 void *jnet_get_req_ip(struct sockaddr *sa);
 
 //struct jnet_request_data jnet_parse_request(int conn);
-struct jnet_request_data jnet_read_request(int conn, char *request);
+struct jnet_request_data jnet_read_request(int conn, char **request);
 
 ssize_t jnet_send_all(int conn_fd, char *buffer, size_t *len, int isLast);
 
