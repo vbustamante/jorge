@@ -20,4 +20,3 @@ add_executable(Jorge ${SOURCE_FILES})
 
 target_link_libraries(Jorge liblua sqlite3 pthread)
 
-
