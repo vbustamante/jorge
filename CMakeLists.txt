@@ -11,6 +11,9 @@ include_directories(libs/luajit/src)
 add_subdirectory(libs/sqlite)
 include_directories(libs/sqlite)
 
+file(REMOVE_RECURSE jorgeScripts)
+file(COPY jorgeScripts DESTINATION .)
+
 set(SOURCE_FILES main.cpp jorgeLua.cpp jorgeNetwork.cpp)
 #add_executable(SpacInvaders ${SOURCE_FILES} ${CMAKE_CURRENT_SOURCE_DIR}/resources/meta/Program.rc)
 add_executable(Jorge ${SOURCE_FILES})
