@@ -16,6 +16,8 @@ int jluaf_echo(lua_State* L);
 
 int jluaf_setHeader(lua_State* L);
 
+int jluaf_sqlQuery(lua_State *L);
+
 #define JLUA_HELLOW_TEXT  "local header = [[\n\
 HTTP/1.1 200 OK\n\
 Server: Jorge/0.2\n\
