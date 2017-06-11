@@ -11,7 +11,7 @@ include_directories(libs/luajit/src)
 add_subdirectory(libs/sqlite)
 include_directories(libs/sqlite)
 
-file(REMOVE_RECURSE jorgeScripts)
+file(REMOVE_RECURSE ${CMAKE_BINARY_DIR}jorgeScripts)
 file(COPY jorgeScripts DESTINATION .)
 
 set(SOURCE_FILES main.cpp jorgeLua.cpp jorgeNetwork.cpp)
