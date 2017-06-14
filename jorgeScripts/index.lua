@@ -13,7 +13,7 @@ local upperBody = [[
     <title>Jorge Root</title>
   </head>
   <body>
-    <h1>TONY WORLD!</h1>
+    <h1>LUIGI WORLD!</h1>
 ]]
 
 local lowerBody = [[

@@ -95,13 +95,17 @@ struct jnet_request_data jnet_read_request(int conn, char **request){
    *  TODO Also refactor this function so it returns the struct instead of the string
    */
   struct jnet_request_data req_data;
+  req_data.verb = NULL;
+  req_data.path = NULL;
+  req_data.header = NULL;
+  req_data.body = NULL;
+  
+  struct jnet_request_header *req_header_walker = NULL;
+  
   int httpParserState =  jnet_parser_state_verb_begin;
   int parserIndex = 0;
   
-  while(
-    (httpParserState != jnet_parser_state_halt) &&
-    (httpParserState != jnet_parser_state_err)
-  ){
+  while(httpParserState != jnet_parser_state_halt){
     char *thisChar = &((*request)[parserIndex]);
     char caractere = *thisChar; 
     switch (httpParserState){
@@ -184,7 +188,7 @@ struct jnet_request_data jnet_read_request(int conn, char **request){
           *(thisChar+9)          == '\n'  
         ){
           req_data.version = *(thisChar+7);
-          httpParserState = jnet_parser_state_halt; // Not parsing headers yet
+          httpParserState = jnet_parser_state_field_begin;
           parserIndex += 10;
         }
         else{
@@ -192,7 +196,99 @@ struct jnet_request_data jnet_read_request(int conn, char **request){
           parserIndex++;
         }
       break;
+      case  jnet_parser_state_field_begin:
+        if(*thisChar == ' ' || *thisChar == '\t'){}
+        else if(
+          (*thisChar >= 'A' && *thisChar <= 'Z') ||
+          (*thisChar >= 'a' && *thisChar <= 'z') ||
+          (*thisChar >= '0' && *thisChar <= '9') ||
+          (*thisChar == '-')||(*thisChar == '.') ||
+          (*thisChar == '+')||(*thisChar == '*')
+        ){
         
+          if(req_data.header == NULL){
+            req_data.header = (struct jnet_request_header*) malloc(sizeof(*req_data.header));
+            req_header_walker = req_data.header;
+          }else{
+            req_header_walker->next = (struct jnet_request_header*) malloc(sizeof(*req_data.header));
+            req_header_walker = req_header_walker->next;
+          }
+          req_header_walker->next = NULL;
+          req_header_walker->field = thisChar;
+          
+          httpParserState = jnet_parser_state_field_end;
+
+        }
+        else if((*thisChar == '\r' && *(thisChar+1) == '\n')){
+          req_data.body = thisChar+2;
+          parserIndex += 2;
+          httpParserState = jnet_parser_state_err;          
+        }
+        else{
+          httpParserState = jnet_parser_state_err;
+        }
+        parserIndex++;
+      break;
+      case  jnet_parser_state_field_end:
+        if(*thisChar == ' ' || *thisChar == '\t'){
+          *thisChar = '\0';
+        }
+        else if(*thisChar == ':'){
+          *thisChar = '\0';
+          httpParserState = jnet_parser_state_value_begin;
+        }
+        else if(
+          (*thisChar >= 'A' && *thisChar <= 'Z') ||
+          (*thisChar >= 'a' && *thisChar <= 'z') ||
+          (*thisChar >= '0' && *thisChar <= '9') ||
+          (*thisChar == '-')||(*thisChar == '.') ||
+          (*thisChar == '+')||(*thisChar == '*')
+        ){}
+        else{
+          httpParserState = jnet_parser_state_err;
+        }
+        parserIndex++;
+      break;
+      case jnet_parser_state_value_begin:
+        if(*thisChar == ' ' || *thisChar == '\t'){}
+        else if(
+          (*thisChar >= 'A' && *thisChar <= 'Z') ||
+          (*thisChar >= 'a' && *thisChar <= 'z') ||
+          (*thisChar >= '0' && *thisChar <= '9') ||
+          (*thisChar == '-')||(*thisChar == '.') ||
+          (*thisChar == '/')||(*thisChar == '?') ||
+          (*thisChar == '+')||(*thisChar == '*')
+        ){
+          req_header_walker->value = thisChar;
+          httpParserState = jnet_parser_state_value_end;
+        }
+        else{
+          httpParserState = jnet_parser_state_err;
+        }
+        parserIndex++;
+      break;
+      case jnet_parser_state_value_end:
+        if(*thisChar == '\r' && *(thisChar+1) == '\n'){
+          req_header_walker->value = thisChar;
+          httpParserState = jnet_parser_state_field_begin;
+          parserIndex += 2;
+        }
+        else if(
+          (*thisChar >= 'A' && *thisChar <= 'Z') ||
+          (*thisChar >= 'a' && *thisChar <= 'z') ||
+          (*thisChar >= '0' && *thisChar <= '9') ||
+          (*thisChar == '-')||(*thisChar == '.') ||
+          (*thisChar == '/')||(*thisChar == '?') ||
+          (*thisChar == '+')||(*thisChar == '*')
+        ) parserIndex++;
+        else{
+          httpParserState = jnet_parser_state_err;
+          parserIndex++;
+        }
+
+      break;
+      case jnet_parser_state_err:
+        // Cleanup
       default:
         httpParserState = jnet_parser_state_halt;
     }

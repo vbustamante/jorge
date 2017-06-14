@@ -29,8 +29,10 @@ enum jnet_parser_state{
   jnet_parser_state_path_begin,
   jnet_parser_state_path_end,
   jnet_parser_state_version,
-  jnet_parser_state_name_begin,
-  jnet_parser_state_value,
+  jnet_parser_state_field_begin,
+  jnet_parser_state_field_end,
+  jnet_parser_state_value_begin,
+  jnet_parser_state_value_end,
   jnet_parser_state_halt,
   jnet_parser_state_err
 };
