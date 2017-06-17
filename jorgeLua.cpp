@@ -50,7 +50,7 @@ void jlua_setup_environment(){
       return;
     }
     
-    fprintf(stderr, "Opened database successfully\n");
+    printf("Opened database successfully\n");
     
     sqlite3_stmt *statement;
     
@@ -105,6 +105,14 @@ void jlua_interpret(int conn_fd, struct jnet_request_data request){
   lua_register(L, "echo", jluaf_echo);
   lua_register(L, "setHeader", jluaf_setHeader);
   lua_register(L, "sqlQuery", jluaf_sqlQuery);
+
+  // Globals
+  lua_pushstring( L, request.path);
+  lua_setglobal( L, "PATH");
+  lua_pushstring( L, request.verb);
+  lua_setglobal( L, "VERB");
+  lua_pushstring( L, request.body);
+  lua_setglobal( L, "BODY");
 
   // Load Script
   {

@@ -17,7 +17,7 @@ local body = [[
   </body>
 </html>
 ]]
-
+local body = body:gsub("\n", "\r\n")
 local bodyLen = echo(body)
 
 local header = header:gsub('\n', '\r\n'):gsub('$bodyLen', bodyLen)

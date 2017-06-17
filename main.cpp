@@ -34,12 +34,29 @@ void *req_thread(void *data){
   
   printf("do %s on %s through http/1.%c\n", req_data.verb, req_data.path, req_data.version);
 
+  printf("Body is : \n%s\n", req_data.body);
+  jnet_request_header *walker = req_data.header;
+  for (int i = 1; walker != NULL; ++i) {
+
+    printf("header %d is : %s : %s\n", i, walker->value, walker->field);
+    walker = walker->next;
+  }
+
+
+
   // Defer everything to the Lua subsystem
   jlua_interpret(conn_fd, req_data);
 
-  // Cleanup  
+  // Cleanup
+  walker = req_data.header;
+  for (int i = 1; walker != NULL; ++i) {
+    jnet_request_header *erasable = walker;
+    walker = walker->next;
+    free(erasable);
+  }
   free(request);
   close(conn_fd);
+  return NULL;
 }
 
 // Entry point

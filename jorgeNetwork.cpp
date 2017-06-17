@@ -99,9 +99,9 @@ struct jnet_request_data jnet_read_request(int conn, char **request){
   req_data.path = NULL;
   req_data.header = NULL;
   req_data.body = NULL;
-  
+
   struct jnet_request_header *req_header_walker = NULL;
-  
+
   int httpParserState =  jnet_parser_state_verb_begin;
   int parserIndex = 0;
   
@@ -205,7 +205,7 @@ struct jnet_request_data jnet_read_request(int conn, char **request){
           (*thisChar == '-')||(*thisChar == '.') ||
           (*thisChar == '+')||(*thisChar == '*')
         ){
-        
+
           if(req_data.header == NULL){
             req_data.header = (struct jnet_request_header*) malloc(sizeof(*req_data.header));
             req_header_walker = req_data.header;
@@ -215,14 +215,14 @@ struct jnet_request_data jnet_read_request(int conn, char **request){
           }
           req_header_walker->next = NULL;
           req_header_walker->field = thisChar;
-          
+
           httpParserState = jnet_parser_state_field_end;
 
         }
         else if((*thisChar == '\r' && *(thisChar+1) == '\n')){
           req_data.body = thisChar+2;
           parserIndex += 2;
-          httpParserState = jnet_parser_state_err;          
+          httpParserState = jnet_parser_state_halt;
         }
         else{
           httpParserState = jnet_parser_state_err;
@@ -269,7 +269,7 @@ struct jnet_request_data jnet_read_request(int conn, char **request){
       break;
       case jnet_parser_state_value_end:
         if(*thisChar == '\r' && *(thisChar+1) == '\n'){
-          req_header_walker->value = thisChar;
+          *thisChar = '\0';
           httpParserState = jnet_parser_state_field_begin;
           parserIndex += 2;
         }
@@ -279,7 +279,13 @@ struct jnet_request_data jnet_read_request(int conn, char **request){
           (*thisChar >= '0' && *thisChar <= '9') ||
           (*thisChar == '-')||(*thisChar == '.') ||
           (*thisChar == '/')||(*thisChar == '?') ||
-          (*thisChar == '+')||(*thisChar == '*')
+          (*thisChar == '+')||(*thisChar == '*') ||
+          (*thisChar == ':')||(*thisChar == '=') ||
+          (*thisChar == '%')||(*thisChar == '&') ||
+          (*thisChar == '(')||(*thisChar == ')') ||
+          (*thisChar == '_')||(*thisChar == ';') ||
+          (*thisChar == ' ')||(*thisChar == '\t')||
+          (*thisChar == ',')||(*thisChar == '\n')
         ) parserIndex++;
         else{
           httpParserState = jnet_parser_state_err;
@@ -289,6 +295,7 @@ struct jnet_request_data jnet_read_request(int conn, char **request){
       break;
       case jnet_parser_state_err:
         // Cleanup
+        printf("Error parsing request\n");
       default:
         httpParserState = jnet_parser_state_halt;
     }
