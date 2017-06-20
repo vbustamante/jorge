@@ -5,7 +5,7 @@
 #include <arpa/inet.h>
 
 #define JNET_REQ_BUFF_SIZE  1024
-#define JNET_RECV_TIMEOUT   .5
+#define JNET_RECV_TIMEOUT   20
 #define JNET_RECV_TIMEEXTRA .001
 
 struct jnet_request_header{

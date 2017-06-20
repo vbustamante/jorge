@@ -1,13 +1,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <errno.h>
 #include <string.h>
 
 #include <sys/socket.h>
 #include <netdb.h>
 #include <arpa/inet.h>
-#include <sys/wait.h>
 
 #include <jorgeLua.h>
 #include <jorgeNetwork.h>
@@ -31,24 +29,27 @@ void *req_thread(void *data){
   // Get request
   char *request; // We need to be able to free the full request data, so we get this
   struct jnet_request_data req_data = jnet_read_request(conn_fd, &request);
-  
-  printf("%s %s through http/1.%c\n", req_data.verb, req_data.path, req_data.version);
 
-  jnet_request_header *walker = req_data.header;
-  for (int i = 1; walker != NULL; ++i) {
+  if(req_data.verb){
+    printf("%s %s through http/1.%c\n", req_data.verb, req_data.path, req_data.version);
 
-    //printf("header %d is : %s : %s\n", i, walker->value, walker->field);
-    walker = walker->next;
+    jnet_request_header *walker = req_data.header;
+    for (int i = 1; walker != NULL; ++i) {
+
+      //printf("header %d is : %s : %s\n", i, walker->value, walker->field);
+      walker = walker->next;
+    }
+    //printf("Body is : \n%s\n", req_data.body);
+
+
+
+    // Defer everything to the Lua subsystem
+    jlua_interpret(conn_fd, req_data);
+
   }
-  //printf("Body is : \n%s\n", req_data.body);
-
-
-
-  // Defer everything to the Lua subsystem
-  jlua_interpret(conn_fd, req_data);
 
   // Cleanup
-  walker = req_data.header;
+  jnet_request_header *walker = req_data.header;
   for (int i = 1; walker != NULL; ++i) {
     jnet_request_header *erasable = walker;
     walker = walker->next;
