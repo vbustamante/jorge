@@ -17,21 +17,24 @@ if err then
 else
 
   bodyLen = echo('{"messages":[')
+  if(ret.count > 0) then
+    for i=1, ret.count-1 do
+      local data = ret.data[i]
+      local sender = data.sender and '"'..data.sender..'"' or 'null'
 
-  for i=1, ret.count-1 do
-    local data = ret.data[i]
+      bodyLen = bodyLen+echo('{"time":"'..data.time..'","id":"'..data.id..'","msg":"'..data.msg..'","sender":'.. sender ..'},')
+    end
+
+    local data = ret.data[ret.count]
     local sender = data.sender and '"'..data.sender..'"' or 'null'
 
-    bodyLen = bodyLen+echo('{"time":"'..data.time..'","id":"'..data.id..'","msg":"'..data.msg..'","sender":'.. sender ..'},')
-  end
+    bodyLen = bodyLen+echo('{"time":"'..data.time..'","id":'..data.id..',"msg":"'..data.msg..'","sender":'..sender..'}]}')
 
-  local data = ret.data[ret.count]
-  local sender = data.sender and '"'..data.sender..'"' or 'null'
-  
-  bodyLen = bodyLen+echo('{"time":"'..data.time..'","id":'..data.id..',"msg":"'..data.msg..'","sender":'..sender..'}]}')
-  
+  else
+    bodyLen = bodyLen+echo(']}')
+  end
   header = header:gsub('$httpCode', '200'):gsub('$httpStatus', 'OK')
-end 
+end
 
 header = header:gsub('\n', '\r\n'):gsub('$bodyLen', bodyLen)
 local headerLen = setHeader(header)

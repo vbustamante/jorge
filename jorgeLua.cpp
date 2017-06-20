@@ -111,7 +111,7 @@ void jlua_interpret(int conn_fd, struct jnet_request_data request){
   lua_setglobal( L, "PATH");
   lua_pushstring( L, request.verb);
   lua_setglobal( L, "VERB");
-  lua_pushstring( L, "");
+  lua_pushstring( L, request.body);
   lua_setglobal( L, "BODY");
 
   // Load Script

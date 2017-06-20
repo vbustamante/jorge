@@ -37,10 +37,10 @@ void *req_thread(void *data){
   jnet_request_header *walker = req_data.header;
   for (int i = 1; walker != NULL; ++i) {
 
-    printf("header %d is : %s : %s\n", i, walker->value, walker->field);
+    //printf("header %d is : %s : %s\n", i, walker->value, walker->field);
     walker = walker->next;
   }
-  printf("Body is : \n%s\n", req_data.body);
+  //printf("Body is : \n%s\n", req_data.body);
 
 
 
