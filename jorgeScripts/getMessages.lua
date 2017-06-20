@@ -7,10 +7,27 @@ Content-Type: application/json
 ]]
 local bodyLen = 0
 
--- TODO receive initial message index and number of messages to be fetch
-ret, err = sqlQuery("SELECT * FROM messages ORDER BY id ASC") 
+local POST = {}
 
-if err then 
+BODY = BODY:gsub ("+", " "):gsub ("%%(%x%x)", -- URL DECODE
+  function(h) return string.char(tonumber(h,16)) end)
+
+for key, value in string.gmatch(BODY, '([^&=]+)=([^&=]+)') do
+  POST[key] = value
+end
+
+local query = "SELECT * FROM messages WHERE id >= $id ORDER BY id ASC LIMIT 50"
+
+if POST["id"] then
+  query = query:gsub("$id", POST["id"])
+else
+  query = query:gsub("$id", "0")
+end
+
+print(query)
+ret, err = sqlQuery(query)
+
+if err then
   print('SQL error: '..err)
   header = header:gsub('$httpCode', '500'):gsub('$httpStatus', 'INTERNAL SERVER ERROR')
   

@@ -280,7 +280,7 @@ int jluaf_setHeader(lua_State* L){
   return 1;
 }
 
-int jluaf_sqlQuery(lua_State *L){
+int jluaf_sqlQuery(lua_State *L){ //TODO Add binding to avoid injections
   
   int args = lua_gettop(L);
   if(args < 1 || lua_type(L, -1) != LUA_TSTRING){
@@ -340,31 +340,31 @@ int jluaf_sqlQuery(lua_State *L){
     
     for(int i=0; i < colCount; i++){
 
-      printf(" %s is ", sqlite3_column_name(statement, i));
+      //printf(" %s is ", sqlite3_column_name(statement, i));
       switch(sqlite3_column_type(statement, i)){
         case SQLITE_INTEGER:
           lua_pushinteger(L, sqlite3_column_int(statement, i));
           
-          printf("int: %d|", sqlite3_column_int(statement, i));
+          //printf("int: %d|", sqlite3_column_int(statement, i));
           break;
         case SQLITE_FLOAT:
           lua_pushnumber(L, sqlite3_column_double(statement, i));
            
-          printf("float: %.2f|", sqlite3_column_double(statement, i));
+          //printf("float: %.2f|", sqlite3_column_double(statement, i));
           break;
         case SQLITE_TEXT:
           lua_pushstring(L, (const char*)sqlite3_column_text(statement, i));
           
-          printf("text: %s|", (const char*)sqlite3_column_text(statement, i));
+          //printf("text: %s|", (const char*)sqlite3_column_text(statement, i));
           
           break;
         case SQLITE_BLOB:
           lua_pushnil(L);
-          printf("BLOB|");
+          //printf("BLOB|");
           break;
         case SQLITE_NULL:
           lua_pushnil(L);
-          printf("NULL|");
+          //printf("NULL|");
           break;
       }
       
