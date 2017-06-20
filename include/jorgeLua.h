@@ -10,7 +10,9 @@ void jlua_setup_environment();
 
 void jlua_interpret(int conn_fd, struct jnet_request_data request);
 
-void jlua_print_error(lua_State* state);
+int jlua_run_file(lua_State* L, char *name);
+
+void jlua_print_error(lua_State* L);
 
 int jluaf_echo(lua_State* L);
 

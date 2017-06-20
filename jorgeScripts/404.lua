@@ -10,14 +10,20 @@ local body = [[
 <!DOCTYPE html>
 <html>
   <head>
-    <title>Not Found</title>
+    <title>Error</title>
   </head>
   <body>
-    <h1>404 - Not Found</h1>
+    <h1>http $err</h1>
   </body>
 </html>
 ]]
-local body = body:gsub("\n", "\r\n")
+
+if ERR then
+    body = body:gsub("\n", "\r\n"):gsub("$err", ERR)
+else
+    body = body:gsub("\n", "\r\n"):gsub("$err", 404)
+end
+
 local bodyLen = echo(body)
 
 local header = header:gsub('\n', '\r\n'):gsub('$bodyLen', bodyLen)

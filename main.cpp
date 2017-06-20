@@ -32,15 +32,15 @@ void *req_thread(void *data){
   char *request; // We need to be able to free the full request data, so we get this
   struct jnet_request_data req_data = jnet_read_request(conn_fd, &request);
   
-  printf("do %s on %s through http/1.%c\n", req_data.verb, req_data.path, req_data.version);
+  printf("%s %s through http/1.%c\n", req_data.verb, req_data.path, req_data.version);
 
-  printf("Body is : \n%s\n", req_data.body);
   jnet_request_header *walker = req_data.header;
   for (int i = 1; walker != NULL; ++i) {
 
     printf("header %d is : %s : %s\n", i, walker->value, walker->field);
     walker = walker->next;
   }
+  printf("Body is : \n%s\n", req_data.body);
 
 
 

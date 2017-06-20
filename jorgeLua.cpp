@@ -111,10 +111,11 @@ void jlua_interpret(int conn_fd, struct jnet_request_data request){
   lua_setglobal( L, "PATH");
   lua_pushstring( L, request.verb);
   lua_setglobal( L, "VERB");
-  lua_pushstring( L, request.body);
+  lua_pushstring( L, "");
   lua_setglobal( L, "BODY");
 
   // Load Script
+  bool scriptError = false;
   {
 
     int lastChar = 0;
@@ -154,24 +155,47 @@ void jlua_interpret(int conn_fd, struct jnet_request_data request){
       luaStatus = luaL_loadfile(L, JLUA_SCRIPT_PATH"/404.lua");
       if(luaStatus){
         jlua_print_error(L);
-        return;
+        scriptError = true;
       }
     }
   }
   
-  luaStatus = lua_pcall(L, 0, 0, 0);
-  bool scriptError = false;
+  if(!scriptError)luaStatus = lua_pcall(L, 0, 0, 0);
   if(luaStatus){
-    // Todo HTTP error on script error
     jlua_print_error(L);
-    scriptError = true;
+
+    // Free Header
+    if(jData.response_header != NULL)free(jData.response_header);
+
+    // Free body
+    jlua_response_body_node *walker = jData.response_body;
+    jlua_response_body_node *last;
+
+    while(walker != NULL){
+      last    = walker;
+      walker  = walker->next;
+
+      free(last->data);
+
+      free(last);
+    }
+
+    jData.response_body_length = 0;
+    jData.response_body = NULL;
+    jData.response_header = NULL;
+    lua_pushinteger( L, 503);
+    lua_setglobal( L, "ERR");
+
+    luaL_loadfile(L, JLUA_SCRIPT_PATH"/404.lua");
+    lua_pcall(L, 0, 0, 0);
   }
 
-
   // Send Header
-  size_t headerLen = strlen(jData.response_header);
-  if(!scriptError) jnet_send_all(jData.connection, jData.response_header, &headerLen, 0);
-  free(jData.response_header);
+  if(jData.response_header != NULL){
+    size_t headerLen = strlen(jData.response_header);
+    jnet_send_all(jData.connection, jData.response_header, &headerLen, 0);
+    free(jData.response_header);
+  }
 
   // Send body
   jlua_response_body_node *walker = jData.response_body;
@@ -190,6 +214,12 @@ void jlua_interpret(int conn_fd, struct jnet_request_data request){
   }
 
   lua_close(L);
+}
+
+int jlua_run_file(lua_State* L, char *name){
+  int luaStatus;
+
+  return luaStatus;
 }
 
 // Prints a lua error.

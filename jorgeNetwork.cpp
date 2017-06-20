@@ -58,7 +58,8 @@ struct jnet_request_data jnet_read_request(int conn, char **request){
 
     if(recvBytes > 0) {
       totalBytes += recvBytes;
-      //printf("%d: \n%s\n(%zu out of %d)\n", loops, last_buffer->data, recvBytes, JNET_REQ_BUFF_SIZE-1);
+      // printf("%d: \n%s\n(%zu out of %d) -1:%d\n", loops, last_buffer->data, recvBytes, JNET_REQ_BUFF_SIZE-1, last_buffer->data[recvBytes]);
+      last_buffer->data[recvBytes] = '\0';
       last_buffer = last_buffer->next;
       gettimeofday(&begin, NULL);
     }
@@ -71,7 +72,7 @@ struct jnet_request_data jnet_read_request(int conn, char **request){
   struct buffer_node *walker;
   walker = first_buffer;
   
-  while(walker->data[0] != '\0'){
+  while(walker != NULL){
     strcpy(endofstring, walker->data);
     endofstring += strlen(walker->data);
 
