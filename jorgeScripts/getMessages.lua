@@ -24,7 +24,6 @@ else
   query = query:gsub("$id", "0")
 end
 
-print(query)
 ret, err = sqlQuery(query)
 
 if err then
@@ -56,5 +55,5 @@ end
 header = header:gsub('\n', '\r\n'):gsub('$bodyLen', bodyLen)
 local headerLen = setHeader(header)
 
-print("Lua - "..bodyLen+headerLen.." bytes sent, H:"..headerLen.." & B:"..bodyLen)
+-- print("Lua - "..bodyLen+headerLen.." bytes sent, H:"..headerLen.." & B:"..bodyLen)
 

@@ -57,6 +57,7 @@ void *req_thread(void *data){
   }
   free(request);
   close(conn_fd);
+  fflush(stdout);
   return NULL;
 }
 
@@ -151,7 +152,7 @@ int main(void){
       incoming_ip, sizeof incoming_ip);
 
     // Start manager thread    
-    printf("\nserver: got connection from %s\n", incoming_ip);
+    printf("%s: ", incoming_ip);
 
     pthread_t req_thread_pointer;
     pthread_create(&req_thread_pointer, 0, req_thread, conn_fd);

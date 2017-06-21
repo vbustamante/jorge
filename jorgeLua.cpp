@@ -373,7 +373,7 @@ int jluaf_sqlQuery(lua_State *L){ //TODO Add binding to avoid injections
     lua_settable(L, -3);
     
     result = sqlite3_step(statement);
-    printf("\n");
+    //printf("\n");
   }
   
   lua_setfield(L, -2, "data");

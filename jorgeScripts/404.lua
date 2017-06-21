@@ -29,4 +29,4 @@ local bodyLen = echo(body)
 local header = header:gsub('\n', '\r\n'):gsub('$bodyLen', bodyLen)
 local headerLen = setHeader(header)
 
-io.write('Lua - '..bodyLen+headerLen..' bytes sent, H:'..headerLen..' & B:'..bodyLen..'\n')
+-- io.write('Lua - '..bodyLen+headerLen..' bytes sent, H:'..headerLen..' & B:'..bodyLen..'\n')

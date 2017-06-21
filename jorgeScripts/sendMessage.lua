@@ -18,13 +18,16 @@ if (not POST["msg"]) then
     header = header:gsub('$httpCode', '400'):gsub('$httpStatus', 'Bad Request')
 else
     local query = "INSERT INTO messages(msg, sender) VALUES('$msg', '$sender')"
-    query = query:gsub("$msg", POST["msg"])
+    local escapedMsg = ""
+    for i in POST["msg"]:gmatch( "%C+" ) do
+        escapedMsg = escapedMsg .. i
+    end
+    query = query:gsub("$msg", escapedMsg)
     if POST["sender"] then
         query = query:gsub("$sender", POST["sender"])
     else
         query = query:gsub("$sender", "NULL")
     end
-    print(query)
     local ret, err = sqlQuery(query)
 
     if err then
